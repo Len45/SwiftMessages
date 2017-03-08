@@ -81,6 +81,33 @@ open class MessageView: BaseView, Identifiable {
     }
     
     private var customId: String?
+
+    /*
+     MARK: - Accessibility
+     */
+
+    /// Set this to specify the accessibility elements and their order.
+    /// See `configureAccessibilityLabel(messageType:)` for example usage.
+    open var accessibleElements: [NSObject]?
+
+    override open func accessibilityElementCount() -> Int {
+        return internalAccessibleElements.count
+    }
+
+    override open func accessibilityElement(at index: Int) -> Any? {
+        return internalAccessibleElements[index]
+    }
+
+    override open func index(ofAccessibilityElement element: Any) -> Int {
+        guard let object = element as? NSObject else { return 0 }
+        return internalAccessibleElements.index(of: object) ?? 0
+    }
+
+    private var internalAccessibleElements: [NSObject] {
+        if let accessibleElements = accessibleElements { return accessibleElements }
+        let elements: [NSObject?] = [iconImageView, iconLabel, titleLabel, bodyLabel, button]
+        return elements.flatMap { $0 }
+    }
 }
 
 /*
@@ -345,3 +372,33 @@ extension MessageView {
         iconLabel?.isHidden = iconLabel?.text == nil
     }
 }
+
+/*
+ MARK: - Accessibility
+ */
+
+extension MessageView {
+
+    /**
+     Combines an optional message type, title and body into a single accessibility label
+     for improved readout. The button remains a separate accessibility element and is read
+     out after the message.
+     
+     - parameter messageType: An opitonal string describing the type of message, e.g. error, warning, etc.
+     */
+    public func configureAccessibilityLabel(messageType: String?) {
+        let components = [messageType, titleLabel?.text, bodyLabel?.text].flatMap { $0 }
+        let label = components.joined(separator: ", ")
+        if let button = button {
+            guard let messageHolder = bodyLabel ?? titleLabel ?? iconLabel ?? iconImageView else { return }
+            accessibleElements = [messageHolder, button]
+            messageHolder.isAccessibilityElement = true
+            messageHolder.accessibilityLabel = label
+        } else {
+            accessibleElements = [backgroundView]
+            backgroundView.isAccessibilityElement = true
+            backgroundView.accessibilityLabel = label
+        }
+    }
+}
+

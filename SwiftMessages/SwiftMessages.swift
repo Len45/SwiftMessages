@@ -260,6 +260,12 @@ open class SwiftMessages: PresenterDelegate {
          > may designate a different window as needed.
          */
         public var becomeKeyWindow: Bool?
+
+        /**
+         The `dimMode` background will use this accessibility
+         label, e.g. "dismiss" when the `interactive` option is used.
+        */
+        public var dimModeAccessibilityLabel: String = "dismiss"
     }
     
     /**

@@ -49,7 +49,7 @@ class Presenter: NSObject, UIGestureRecognizerDelegate {
     let config: SwiftMessages.Config
     let view: UIView
     weak var delegate: PresenterDelegate?
-    let maskingView = PassthroughView()
+    let maskingView = MaskingView()
     var presentationContext = PresentationContext.viewController(Weak<UIViewController>(value: nil))
     let panRecognizer: UIPanGestureRecognizer
     var translationConstraint: NSLayoutConstraint! = nil
@@ -178,6 +178,7 @@ class Presenter: NSObject, UIGestureRecognizerDelegate {
                 translationConstraint = NSLayoutConstraint(item: maskingView, attribute: .bottom, relatedBy: .equal, toItem: view, attribute: .bottom, multiplier: 1.00, constant: 0.0)
             }
             maskingView.addConstraints([leading, trailing, translationConstraint])
+            maskingView.accessibleElements = [view]
             if let adjustable = view as? MarginAdjustable {
                 var top: CGFloat = 0.0
                 var bottom: CGFloat = 0.0
@@ -208,7 +209,6 @@ class Presenter: NSObject, UIGestureRecognizerDelegate {
             view.addGestureRecognizer(panRecognizer)
         }
         do {
-            
             func setupInteractive(_ interactive: Bool) {
                 if interactive {
                     maskingView.tappedHander = { [weak self] in
@@ -216,6 +216,7 @@ class Presenter: NSObject, UIGestureRecognizerDelegate {
                         strongSelf.interactivelyHidden = true
                         strongSelf.delegate?.hide(presenter: strongSelf)
                     }
+                    setupInteractiveDimViewAccessibility()
                 } else {
                     // There's no action to take, but the presence of
                     // a tap handler prevents interaction with underlying views.
@@ -231,6 +232,36 @@ class Presenter: NSObject, UIGestureRecognizerDelegate {
             case .color(_, let interactive):
                 setupInteractive(interactive)
             }
+        }
+    }
+
+    private func setupInteractiveDimViewAccessibility() {
+        let accessibilityView = UIView()
+        accessibilityView.frame = maskingView.frame
+        accessibilityView.isAccessibilityElement = true
+        accessibilityView.accessibilityLabel = config.dimModeAccessibilityLabel
+        accessibilityView.accessibilityTraits = UIAccessibilityTraitButton
+        maskingView.addSubview(accessibilityView)
+        maskingView.sendSubview(toBack: accessibilityView)
+        accessibilityView.isUserInteractionEnabled = false
+        maskingView.accessibleElements.append(accessibilityView)
+    }
+
+    class MaskingView: PassthroughView {
+
+        var accessibleElements: [NSObject] = []
+
+        override func accessibilityElementCount() -> Int {
+            return accessibleElements.count
+        }
+
+        override func accessibilityElement(at index: Int) -> Any? {
+            return accessibleElements[index]
+        }
+
+        override func index(ofAccessibilityElement element: Any) -> Int {
+            guard let object = element as? NSObject else { return 0 }
+            return accessibleElements.index(of: object) ?? 0
         }
     }
 
